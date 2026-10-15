@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyCast India - Live Indian & Global Weather Forecast</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-default">
+    <!-- Ambient Animated Glow -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <!-- Main Navigation Bar -->
+    <header class="navbar">
+        <div class="nav-brand" onclick="loadCityWeather('New Delhi')">
+            <div class="brand-icon">
+                <i class="fa-solid fa-cloud-bolt"></i>
+            </div>
+            <div class="brand-text">
+                <h1>SkyCast <span class="india-badge"><img src="https://flagcdn.com/w20/in.png" alt="India" class="flag-icon"> India</span></h1>
+                <span class="live-tag"><i class="fa-solid fa-circle pulse-dot"></i> Live Weather &bull; IST</span>
+            </div>
+        </div>
+
+        <div class="nav-controls">
+            <!-- OpenWeather API Key Config Button -->
+            <button class="btn-api-key" title="Configure OpenWeather API Key" onclick="toggleApiKeyModal(true)">
+                <i class="fa-solid fa-key"></i>
+                <span id="api-status-text">OpenWeather API</span>
+            </button>
+
+            <!-- Unit Switcher -->
+            <div class="unit-toggle" title="Toggle Temperature Unit">
+                <button id="unit-c" class="unit-btn active" onclick="setUnit('C')">°C</button>
+                <button id="unit-f" class="unit-btn" onclick="setUnit('F')">°F</button>
+            </div>
+
+            <!-- Current Location Button -->
+            <button class="btn-icon" id="geo-btn" title="Detect Current GPS Location (India / Local)" onclick="fetchLocationWeather()">
+                <i class="fa-solid fa-location-crosshairs"></i>
+            </button>
+
+            <!-- User Auth Status -->
+            <div id="user-badge" class="user-badge hidden">
+                <i class="fa-regular fa-circle-user"></i>
+                <span id="user-email-display">user@example.com</span>
+                <button class="btn-logout" title="Logout" onclick="logoutUser()">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </button>
+            </div>
+
+            <button id="auth-modal-btn" class="btn-auth" onclick="toggleAuthModal(true)">
+                <i class="fa-solid fa-user-lock"></i>
+                <span>Sign In</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="app-layout">
+        <!-- Search Section -->
+        <section class="search-section">
+            <form id="search-form" class="search-bar" onsubmit="onSearchSubmit(event)">
+                <i class="fa-solid fa-magnifying-glass search-leading-icon"></i>
+                <input 
+                    type="text" 
+                    id="city" 
+                    name="city" 
+                    data-testid="city-input"
+                    placeholder="Search Indian cities (e.g. Delhi, Mumbai, Bengaluru, Kolkata, Pune) or worldwide..." 
+                    required
+                    autocomplete="off"
+                >
+                <button type="button" id="clear-search-btn" class="btn-clear hidden" onclick="clearSearch()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <button type="submit" id="search-button" data-testid="search-button" class="btn-search">
+                    <span>Search</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <!-- Quick Indian City Selector Chips -->
+            <div class="quick-chips">
+                <span class="chips-label"><i class="fa-solid fa-location-dot"></i> Top Indian Places:</span>
+                <button class="chip active-chip" onclick="searchCity('New Delhi')">🇮🇳 New Delhi</button>
+                <button class="chip" onclick="searchCity('Kerala')">🌴 Kerala</button>
+                <button class="chip" onclick="searchCity('Mumbai')">🇮🇳 Mumbai</button>
+                <button class="chip" onclick="searchCity('Bengaluru')">🇮🇳 Bengaluru</button>
+                <button class="chip" onclick="searchCity('Goa')">🏖️ Goa</button>
+                <button class="chip" onclick="searchCity('Kolkata')">🇮🇳 Kolkata</button>
+                <button class="chip" onclick="searchCity('Chennai')">🇮🇳 Chennai</button>
+                <button class="chip" onclick="searchCity('Hyderabad')">🇮🇳 Hyderabad</button>
+                <button class="chip" onclick="searchCity('Pune')">🇮🇳 Pune</button>
+                <button class="chip" onclick="searchCity('Jaipur')">🇮🇳 Jaipur</button>
+                <button class="chip" onclick="searchCity('Kochi')">🇮🇳 Kochi</button>
+                <button class="chip" onclick="searchCity('Manali')">🏔️ Manali</button>
+            </div>
+        </section>
+
+        <!-- Notification Banner / Alert -->
+        <div id="city-error" class="error alert error-message hidden" role="alert" data-testid="city-error-message">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="error-text">City not found.</span>
+        </div>
+
+        <!-- Weather Content Dashboard -->
+        <div id="forecast-result" class="weather-dashboard weather-card forecast forecast-container" data-testid="weather-forecast">
+            <!-- Top Hero Card (Current Weather) -->
+            <section class="hero-weather-card">
+                <div class="hero-left">
+                    <div class="location-heading">
+                        <h2 id="weather-city" class="city-name">New Delhi</h2>
+                        <span id="weather-country" class="country-badge">India 🇮🇳</span>
+                        <span id="api-source-badge" class="source-badge"><i class="fa-solid fa-bolt"></i> Live OpenWeather</span>
+                    </div>
+                    <p id="weather-date" class="date-text">Saturday, Oct 3, 2026</p>
+                    <p id="weather-time" class="time-text"><i class="fa-regular fa-clock"></i> Indian Standard Time (IST)</p>
+
+                    <div class="primary-temp">
+                        <span id="weather-temp" class="temp-val">31</span>
+                        <span class="temp-symbol">°C</span>
+                    </div>
+                    <div class="condition-row">
+                        <span id="weather-description" class="weather-desc">Haze / Clear Sky</span>
+                        <span class="bullet">&bull;</span>
+                        <span class="feels-like-text">Feels like <strong id="weather-feels">34°C</strong></span>
+                    </div>
+                </div>
+
+                <div class="hero-right">
+                    <div class="weather-art">
+                        <i id="weather-icon" class="fa-solid fa-sun hero-icon"></i>
+                    </div>
+                    <div class="temp-range">
+                        <span><i class="fa-solid fa-arrow-up"></i> Max: <strong id="temp-max">35°C</strong></span>
+                        <span><i class="fa-solid fa-arrow-down"></i> Min: <strong id="temp-min">24°C</strong></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detailed Weather Metrics Grid -->
+            <section class="metrics-grid">
+                <!-- Humidity -->
+                <div class="metric-card">
+                    <div class="metric-icon humidity-icon"><i class="fa-solid fa-droplet"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-title">Humidity</span>
+                        <span id="weather-humidity" class="metric-value">55%</span>
+                        <span class="metric-sub">Comfortable</span>
+                    </div>
+                </div>
+
+                <!-- Wind Speed -->
+                <div class="metric-card">
+                    <div class="metric-icon wind-icon"><i class="fa-solid fa-wind"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-title">Wind Speed</span>
+                        <span id="weather-wind" class="metric-value">12 km/h</span>
+                        <span id="weather-wind-dir" class="metric-sub">North-West</span>
+                    </div>
+                </div>
+
+                <!-- Air Pressure -->
+                <div class="metric-card">
+                    <div class="metric-icon pressure-icon"><i class="fa-solid fa-gauge-high"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-title">Pressure</span>
+                        <span id="weather-pressure" class="metric-value">1012 hPa</span>
+                        <span class="metric-sub">Barometer Normal</span>
+                    </div>
+                </div>
+
+                <!-- UV Index -->
+                <div class="metric-card">
+                    <div class="metric-icon uv-icon"><i class="fa-solid fa-sun"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-title">UV Index</span>
+                        <span id="weather-uv" class="metric-value">6.8 (High)</span>
+                        <span class="metric-sub">Sunscreen advised</span>
+                    </div>
+                </div>
+
+                <!-- Sunrise -->
+                <div class="metric-card">
+                    <div class="metric-icon sunrise-icon"><i class="fa-solid fa-sun-plant-wilt"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-title">Sunrise (IST)</span>
+                        <span id="weather-sunrise" class="metric-value">06:15 AM</span>
+                        <span class="metric-sub">Dawn</span>
+                    </div>
+                </div>
+
+                <!-- Sunset -->
+                <div class="metric-card">
+                    <div class="metric-icon sunset-icon"><i class="fa-solid fa-moon"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-title">Sunset (IST)</span>
+                        <span id="weather-sunset" class="metric-value">06:05 PM</span>
+                        <span class="metric-sub">Dusk</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hourly Forecast Slider -->
+            <section class="forecast-block">
+                <div class="section-header">
+                    <h3><i class="fa-regular fa-clock"></i> 24-Hour Timeline Forecast (IST)</h3>
+                </div>
+                <div id="hourly-forecast-row" class="hourly-scroll-container">
+                    <!-- Dynamic Hourly Cards -->
+                </div>
+            </section>
+
+            <!-- 5-Day Extended Daily Forecast -->
+            <section class="forecast-block">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-calendar-week"></i> 5-Day Indian Weather Outlook</h3>
+                </div>
+                <div id="daily-forecast-grid" class="five-day-grid">
+                    <!-- Dynamic 5-Day Cards -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- OPENWEATHER API KEY CONFIGURATION MODAL -->
+    <div id="api-key-modal" class="modal-backdrop hidden">
+        <div class="auth-card">
+            <button class="btn-close-modal" onclick="toggleApiKeyModal(false)" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h2><i class="fa-solid fa-cloud-sun"></i> OpenWeather API</h2>
+            <p class="auth-sub">Enter your free OpenWeatherMap API key (or leave empty to use our built-in Indian high-accuracy meteorology feed).</p>
+
+            <form onsubmit="saveApiKey(event)">
+                <div class="input-group">
+                    <label for="ow-api-key"><i class="fa-solid fa-key"></i> OpenWeather API Key (Optional)</label>
+                    <input type="text" id="ow-api-key" placeholder="e.g. b6907d289e10d714a6e88b30761fae22">
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    <i class="fa-solid fa-floppy-disk"></i> Save &amp; Refresh Weather
+                </button>
+            </form>
+
+            <div class="demo-box" style="margin-top: 1rem; text-align: left; font-size: 0.8rem;">
+                <p><strong>Note:</strong> By default, live data works 100% without any key. Adding your key switches the provider to OpenWeather 2.5/3.0 endpoints directly.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTHENTICATION MODAL (Login / Register) -->
+    <div id="auth-modal" class="modal-backdrop hidden">
+        <div class="auth-card">
+            <button class="btn-close-modal" onclick="toggleAuthModal(false)" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="auth-tabs">
+                <button id="tab-login" class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+                <button id="tab-register" class="tab-btn" onclick="switchTab('register')">Create Account</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form" onsubmit="handleLoginSubmit(event)">
+                <h2>Welcome Back!</h2>
+                <p class="auth-sub">Enter your credentials to access your dashboard</p>
+
+                <div id="login-error" class="error alert error-message hidden" role="alert" data-testid="error-message">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="login-error-text">Invalid email or password.</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="email"><i class="fa-regular fa-envelope"></i> Email Address</label>
+                    <input type="email" id="email" name="email" data-testid="email-input" placeholder="user@example.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="password"><i class="fa-solid fa-lock"></i> Password</label>
+                    <input type="password" id="password" name="password" data-testid="password-input" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" id="login-button" data-testid="login-button" class="btn-submit">
+                    <i class="fa-solid fa-right-to-bracket"></i> Sign In
+                </button>
+
+                <div class="demo-box">
+                    <small><strong>Test Credentials:</strong> <code>user@example.com</code> / <code>password123</code></small>
+                </div>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form hidden" onsubmit="handleRegisterSubmit(event)">
+                <h2>Join SkyCast India</h2>
+                <p class="auth-sub">Create your account for personalized forecast alerts</p>
+
+                <div id="register-error" class="error alert error-message hidden" role="alert">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="reg-error-text">Registration failed.</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-name"><i class="fa-regular fa-user"></i> Full Name</label>
+                    <input type="text" id="reg-name" placeholder="Rahul Sharma" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-email"><i class="fa-regular fa-envelope"></i> Email Address</label>
+                    <input type="email" id="reg-email" placeholder="rahul@example.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-password"><i class="fa-solid fa-lock"></i> Password</label>
+                    <input type="password" id="reg-password" placeholder="Minimum 6 characters" minlength="6" required>
+                </div>
+
+                <button type="submit" id="register-button" class="btn-submit">
+                    <i class="fa-solid fa-user-plus"></i> Create Account
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+        <p><strong>SkyCast India</strong> &bull; Powered by OpenWeather &amp; Indian Meteorological Feeds &bull; Made with HTML, CSS, JavaScript</p>
+    </footer>
+
+    <!-- App Scripts -->
+    <script src="script.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

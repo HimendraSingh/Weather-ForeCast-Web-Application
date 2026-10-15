@@ -1,0 +1,227 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Weather App API Tests",
+    "description": "API test collection for Weather Forecasting App covering authentication and weather forecast endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Login with Valid Credentials",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Token is present in response\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.token).to.exist;",
+              "    pm.expect(jsonData.token).to.be.a(\"string\");",
+              "    ",
+              "    // Store token automatically for subsequent authorized requests",
+              "    if (jsonData.token) {",
+              "        pm.environment.set(\"token\", jsonData.token);",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{validEmail}}\",\n  \"password\": \"{{validPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Authenticates user with valid credentials, verifies HTTP 200, checks that JWT token is returned, and saves the token to environment variables."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Login with Invalid Credentials",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 400 or 401 for invalid credentials\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+              "});",
+              "",
+              "pm.test(\"Error response contains message\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message || jsonData.error).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"invalid_user@example.com\",\n  \"password\": \"wrongPassword123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Attempts login with incorrect password / non-existent user and asserts that the API responds with 400 or 401 status and error message."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Forecast for a Valid City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Weather forecast data has key fields\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.be.an(\"object\");",
+              "    ",
+              "    // Check common key weather fields",
+              "    const hasCity = jsonData.city !== undefined || jsonData.name !== undefined || jsonData.location !== undefined;",
+              "    const hasWeatherData = jsonData.temperature !== undefined || jsonData.main !== undefined || jsonData.forecast !== undefined || jsonData.weather !== undefined;",
+              "    ",
+              "    pm.expect(hasCity, \"City/location field is present\").to.be.true;",
+              "    pm.expect(hasWeatherData, \"Weather/temperature data is present\").to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/weather/forecast?city=London",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "weather",
+            "forecast"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "London"
+            }
+          ]
+        },
+        "description": "Fetches weather forecast for a valid city ('London') using Bearer JWT authentication and verifies status 200 and key weather fields."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Forecast for an Invalid City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 400 or 404 for invalid city\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+              "});",
+              "",
+              "pm.test(\"Error message is returned\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message || jsonData.error).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/weather/forecast?city=InvalidCityXYZ12345",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "weather",
+            "forecast"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "InvalidCityXYZ12345"
+            }
+          ]
+        },
+        "description": "Queries forecast with a non-existent city name and verifies appropriate error status (400 or 404) and error message in response."
+      },
+      "response": []
+    }
+  ]
+}
